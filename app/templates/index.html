@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cloud CAD Automation POC</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 1100px; margin: 40px auto; padding: 0 20px; color:#222; }
+    form { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; padding:20px; border:1px solid #ddd; border-radius:10px; }
+    label { display:flex; flex-direction:column; gap:6px; font-size:14px; }
+    input, select { padding:10px; border:1px solid #bbb; border-radius:6px; }
+    button { grid-column:1/-1; padding:12px; font-weight:bold; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; margin-top:24px; }
+    th, td { border-bottom:1px solid #ddd; padding:9px; text-align:left; font-size:14px; }
+    .status { font-weight:bold; }
+  </style>
+</head>
+<body>
+  <h1>Cloud CAD Automation POC</h1>
+  <p>Milestone 1: Railway web/API + PostgreSQL-ready job storage.</p>
+
+  <form method="post" action="/jobs">
+    <label>Customer
+      <input name="customer_name" value="POC User">
+    </label>
+    <label>Width (mm)
+      <input name="width" type="number" value="800" min="200" required>
+    </label>
+    <label>Height (mm)
+      <input name="height" type="number" value="1800" min="300" required>
+    </label>
+    <label>Depth (mm)
+      <input name="depth" type="number" value="600" min="200" required>
+    </label>
+    <label>Material
+      <select name="material">
+        <option>Steel</option>
+        <option>Stainless Steel</option>
+      </select>
+    </label>
+    <label>Door Type
+      <select name="door_type">
+        <option>Single</option>
+        <option selected>Double</option>
+      </select>
+    </label>
+    <label>Shelves
+      <input name="shelf_count" type="number" value="5" min="0" max="30" required>
+    </label>
+    <label>Quantity
+      <input name="quantity" type="number" value="1" min="1" max="1000" required>
+    </label>
+    <button type="submit">Create CAD Job</button>
+  </form>
+
+  <h2>Recent Jobs</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th><th>Size</th><th>Material</th><th>Door</th><th>Shelves</th><th>Qty</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr>
+        <td>JOB-{{ "%06d"|format(job.id) }}</td>
+        <td>{{ job.width }}×{{ job.height }}×{{ job.depth }}</td>
+        <td>{{ job.material }}</td>
+        <td>{{ job.door_type }}</td>
+        <td>{{ job.shelf_count }}</td>
+        <td>{{ job.quantity }}</td>
+        <td class="status">{{ job.status }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">No jobs yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p>API: <a href="/api/jobs">/api/jobs</a> · Health: <a href="/health">/health</a></p>
+</body>
+</html>
