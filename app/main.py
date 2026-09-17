@@ -1,3 +1,4 @@
+from app.azure_queue import send_job_to_queue
 from pathlib import Path
 from fastapi import FastAPI, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -57,6 +58,26 @@ def create_job(
     db.add(job)
     db.commit()
     db.refresh(job)
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    job_data = {
+        "job_id": f"JOB-{job.id:06d}",
+        "customer_name": job.customer_name,
+        "width": job.width,
+        "height": job.height,
+        "depth": job.depth,
+        "material": job.material,
+        "door_type": job.door_type,
+        "shelf_count": job.shelf_count,
+        "quantity": job.quantity,
+        "status": job.status,
+    }
+
+    send_job_to_queue(job_data)
+
+    return RedirectResponse(url="/", status_code=303)
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/api/jobs")
