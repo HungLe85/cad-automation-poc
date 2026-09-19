@@ -58,6 +58,7 @@
     <thead>
       <tr>
         <th>ID</th><th>Size</th><th>Material</th><th>Door</th><th>Shelves</th><th>Qty</th><th>Status</th>
+<th>Output</th>
       </tr>
     </thead>
     <tbody>
@@ -70,9 +71,18 @@
         <td>{{ job.shelf_count }}</td>
         <td>{{ job.quantity }}</td>
         <td class="status">{{ job.status }}</td>
+<td>
+  {% if job.status == "COMPLETED" and job.output_url %}
+    <a href="/api/jobs/{{ job.id }}/download">
+      Download BOM
+    </a>
+  {% else %}
+    —
+  {% endif %}
+</td>
       </tr>
       {% else %}
-      <tr><td colspan="7">No jobs yet.</td></tr>
+      <tr><td colspan="8">No jobs yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>
