@@ -1,3 +1,8 @@
+from io import BytesIO
+from urllib.parse import urlparse, unquote
+
+from azure.storage.blob import BlobServiceClient
+from fastapi.responses import StreamingResponse
 import os
 import secrets
 
@@ -176,3 +181,73 @@ def complete_job(
         "status": job.status,
         "output_url": job.output_url
     }
+@app.get("/api/jobs/{job_id}/download")
+def download_job_output(
+    job_id: int,
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
+
+    if job.status != "COMPLETED" or not job.output_url:
+        raise HTTPException(
+            status_code=409,
+            detail="Job output is not ready"
+        )
+
+    connection_string = os.getenv(
+        "AZURE_STORAGE_CONNECTION_STRING"
+    )
+
+    if not connection_string:
+        raise HTTPException(
+            status_code=503,
+            detail="Azure Storage is not configured"
+        )
+
+    try:
+        blob_service = BlobServiceClient.from_connection_string(
+            connection_string
+        )
+
+        parsed_url = urlparse(job.output_url)
+        expected_host = (
+            f"{blob_service.account_name}.blob.core.windows.net"
+        )
+
+        if parsed_url.hostname != expected_host:
+            raise ValueError("Unexpected Blob Storage host")
+
+        blob_path = unquote(parsed_url.path).lstrip("/")
+        container_name, blob_name = blob_path.split("/", 1)
+
+        if container_name != "cad-output":
+            raise ValueError("Unexpected container")
+
+        blob_client = blob_service.get_blob_client(
+            container=container_name,
+            blob=blob_name
+        )
+
+        file_data = blob_client.download_blob().readall()
+
+        return StreamingResponse(
+            BytesIO(file_data),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="JOB-{job_id:06d}-BOM.csv"'
+                )
+            }
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to download job output"
+        )
