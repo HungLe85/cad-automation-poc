@@ -1,3 +1,8 @@
+import os
+import secrets
+
+from fastapi import Header, HTTPException
+from pydantic import BaseModel
 from app.azure_queue import send_job_to_queue
 from pathlib import Path
 from fastapi import FastAPI, Depends, Form, Request
@@ -121,4 +126,53 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
         "status": j.status,
         "output_url": j.output_url,
         "created_at": j.created_at.isoformat(),
+    }
+class JobCompleteRequest(BaseModel):
+    output_url: str
+
+
+@app.patch("/api/jobs/{job_id}/complete")
+def complete_job(
+    job_id: int,
+    payload: JobCompleteRequest,
+    x_worker_api_key: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    expected_key = os.getenv("WORKER_API_KEY")
+
+    if not expected_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Worker API key is not configured"
+        )
+
+    if not x_worker_api_key or not secrets.compare_digest(
+        x_worker_api_key,
+        expected_key
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized worker"
+        )
+
+    job = db.query(Job).filter(
+        Job.id == job_id
+    ).first()
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
+
+    job.status = "COMPLETED"
+    job.output_url = payload.output_url
+
+    db.commit()
+    db.refresh(job)
+
+    return {
+        "id": job.id,
+        "status": job.status,
+        "output_url": job.output_url
     }

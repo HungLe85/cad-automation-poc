@@ -6,3 +6,14 @@ __pycache__/
 .DS_Store
 poc.db
 poc.db
+# Generated CAD output
+output/
+
+# Local worker secrets
+.env
+.env.*
+!.env.example
+
+# Python cache
+__pycache__/
+*.pyc
