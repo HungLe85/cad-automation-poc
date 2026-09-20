@@ -73,14 +73,22 @@
         <td class="status">{{ job.status }}</td>
 <td>
   {% if job.status == "COMPLETED" and job.output_url %}
+
     <a href="/api/jobs/{{ job.id }}/download">
       Download BOM
     </a>
+
+    <br>
+
+    <a href="/api/jobs/{{ job.id }}/drawing">
+      Download Drawing
+    </a>
+
   {% else %}
     —
   {% endif %}
-</td>
-      </tr>
+</td>      
+</tr>
       {% else %}
       <tr><td colspan="8">No jobs yet.</td></tr>
       {% endfor %}
