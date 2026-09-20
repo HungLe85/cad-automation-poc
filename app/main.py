@@ -251,3 +251,63 @@ def download_job_output(
             status_code=502,
             detail="Unable to download job output"
         )
+@app.get("/api/jobs/{job_id}/drawing")
+def download_job_drawing(
+    job_id: int,
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
+
+    if job.status != "COMPLETED" or not job.output_url:
+        raise HTTPException(
+            status_code=409,
+            detail="Job output is not ready"
+        )
+
+    connection_string = os.getenv(
+        "AZURE_STORAGE_CONNECTION_STRING"
+    )
+
+    if not connection_string:
+        raise HTTPException(
+            status_code=503,
+            detail="Azure Storage is not configured"
+        )
+
+    try:
+        blob_service = BlobServiceClient.from_connection_string(
+            connection_string
+        )
+
+        blob_name = (
+            f"JOB-{job_id:06d}/Cabinet_Drawing.pdf"
+        )
+
+        blob_client = blob_service.get_blob_client(
+            container="cad-output",
+            blob=blob_name
+        )
+
+        file_data = blob_client.download_blob().readall()
+
+        return StreamingResponse(
+            BytesIO(file_data),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="JOB-{job_id:06d}-Drawing.pdf"'
+                )
+            }
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to download drawing PDF"
+        )
