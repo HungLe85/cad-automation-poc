@@ -311,3 +311,83 @@ def download_job_drawing(
             status_code=502,
             detail="Unable to download drawing PDF"
         )
+
+
+@app.get("/api/jobs/{job_id}/3d/{file_type}")
+def download_job_3d(
+    job_id: int,
+    file_type: str,
+    db: Session = Depends(get_db),
+):
+    file_options = {
+        "freecad": (
+            "Cabinet_3D.FCStd",
+            "application/octet-stream",
+        ),
+        "step": (
+            "Cabinet_3D.step",
+            "application/step",
+        ),
+    }
+
+    if file_type not in file_options:
+        raise HTTPException(
+            status_code=404,
+            detail="Unsupported 3D file type",
+        )
+
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found",
+        )
+
+    if job.status != "COMPLETED" or not job.output_url:
+        raise HTTPException(
+            status_code=409,
+            detail="Job output is not ready",
+        )
+
+    connection_string = os.getenv(
+        "AZURE_STORAGE_CONNECTION_STRING"
+    )
+
+    if not connection_string:
+        raise HTTPException(
+            status_code=503,
+            detail="Azure Storage is not configured",
+        )
+
+    filename, media_type = file_options[file_type]
+
+    blob_name = f"JOB-{job_id:06d}/{filename}"
+
+    try:
+        blob_service = BlobServiceClient.from_connection_string(
+            connection_string
+        )
+
+        blob_client = blob_service.get_blob_client(
+            container="cad-output",
+            blob=blob_name,
+        )
+
+        file_data = blob_client.download_blob().readall()
+
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to download 3D file",
+        )
+
+    return StreamingResponse(
+        BytesIO(file_data),
+        media_type=media_type,
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="JOB-{job_id:06d}-{filename}"'
+            )
+        },
+    )
