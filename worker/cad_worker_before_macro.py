@@ -23,10 +23,7 @@ from drawing_generator import generate_drawing
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_ROOT = PROJECT_DIR / "output"
 GENERATOR = PROJECT_DIR / "worker" / "freecad_generator.py"
-FREECAD_MACRO = PROJECT_DIR / "worker" / "run_freecad.FCMacro"
-
-DEFAULT_FREECAD_CMD = r"C:\Program Files\FreeCAD 1.1\bin\freecad.exe"
-
+DEFAULT_FREECAD_CMD = r"C:\Program Files\FreeCAD 1.1\bin\FreeCADCmd.exe"
 CONTENT_TYPES = {
     "BOM.csv": "text/csv",
     "Cabinet_Drawing.pdf": "application/pdf",
@@ -44,10 +41,8 @@ def create_cad_files(job, output_dir):
         raise FileNotFoundError(f"FreeCADCmd.exe not found: {freecad_cmd}")
     if not GENERATOR.is_file():
         raise FileNotFoundError(f"FreeCAD generator not found: {GENERATOR}")
-    if not FREECAD_MACRO.is_file():
-        raise FileNotFoundError(f"FreeCAD macro not found: {FREECAD_MACRO}")
 
-    command = [str(freecad_cmd), str(FREECAD_MACRO)]
+    command = [str(freecad_cmd), str(GENERATOR)]
 
     env = os.environ.copy()
     env["CAD_JOB_JSON"] = str(job_file.resolve())

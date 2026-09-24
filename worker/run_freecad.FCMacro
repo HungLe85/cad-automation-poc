@@ -1,0 +1,26 @@
+import os
+import sys
+import traceback
+
+project_dir = os.path.abspath(os.getcwd())
+worker_dir = os.path.join(project_dir, "worker")
+
+if worker_dir not in sys.path:
+    sys.path.insert(0, worker_dir)
+
+try:
+    from freecad_generator import main
+
+    print("Starting FreeCAD 3D Generator...", flush=True)
+
+    main()
+
+    print("FreeCAD 3D Generator finished!", flush=True)
+
+except Exception:
+    traceback.print_exc()
+    raise
+
+finally:
+    import FreeCADGui as Gui
+    Gui.getMainWindow().close()
