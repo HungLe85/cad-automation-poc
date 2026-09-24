@@ -17,3 +17,7 @@ output/
 # Python cache
 __pycache__/
 *.pyc
+# Local backup and experimental files
+worker/*_backup*.py
+worker/*_before_*.py
+worker/test_*.py
