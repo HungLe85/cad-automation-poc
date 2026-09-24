@@ -391,3 +391,128 @@ def download_job_3d(
             )
         },
     )
+
+
+
+@app.get("/api/jobs/{job_id}/freecad")
+def download_job_freecad(
+    job_id: int,
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found",
+        )
+
+    if job.status != "COMPLETED":
+        raise HTTPException(
+            status_code=409,
+            detail="Job output is not ready",
+        )
+
+    connection_string = os.getenv(
+        "AZURE_STORAGE_CONNECTION_STRING"
+    )
+
+    if not connection_string:
+        raise HTTPException(
+            status_code=503,
+            detail="Azure Storage is not configured",
+        )
+
+    try:
+        blob_service = BlobServiceClient.from_connection_string(
+            connection_string
+        )
+
+        blob_name = (
+            f"JOB-{job_id:06d}/Cabinet_3D.FCStd"
+        )
+
+        blob_client = blob_service.get_blob_client(
+            container="cad-output",
+            blob=blob_name,
+        )
+
+        file_data = blob_client.download_blob().readall()
+
+        return StreamingResponse(
+            BytesIO(file_data),
+            media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="JOB-{job_id:06d}-Cabinet_3D.FCStd"'
+                )
+            },
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to download FreeCAD file",
+        )
+
+
+@app.get("/api/jobs/{job_id}/step")
+def download_job_step(
+    job_id: int,
+    db: Session = Depends(get_db),
+):
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found",
+        )
+
+    if job.status != "COMPLETED":
+        raise HTTPException(
+            status_code=409,
+            detail="Job output is not ready",
+        )
+
+    connection_string = os.getenv(
+        "AZURE_STORAGE_CONNECTION_STRING"
+    )
+
+    if not connection_string:
+        raise HTTPException(
+            status_code=503,
+            detail="Azure Storage is not configured",
+        )
+
+    try:
+        blob_service = BlobServiceClient.from_connection_string(
+            connection_string
+        )
+
+        blob_name = (
+            f"JOB-{job_id:06d}/Cabinet_3D.step"
+        )
+
+        blob_client = blob_service.get_blob_client(
+            container="cad-output",
+            blob=blob_name,
+        )
+
+        file_data = blob_client.download_blob().readall()
+
+        return StreamingResponse(
+            BytesIO(file_data),
+            media_type="application/step",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="JOB-{job_id:06d}-Cabinet_3D.step"'
+                )
+            },
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to download STEP file",
+        )

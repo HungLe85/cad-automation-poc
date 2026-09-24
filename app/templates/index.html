@@ -82,8 +82,19 @@
 
     <a href="/api/jobs/{{ job.id }}/drawing">
       Download Drawing
+    </a>	
+    <br>
+
+    <a href="/api/jobs/{{ job.id }}/freecad">
+      Download FreeCAD
     </a>
 
+    <br>
+
+    <a href="/api/jobs/{{ job.id }}/step">
+      Download STEP
+    </a>
+	
   {% else %}
     —
   {% endif %}
